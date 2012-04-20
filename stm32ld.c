@@ -68,6 +68,7 @@ static int stm32h_send_address( u32 address )
 static int stm32h_connect_to_bl()
 {
   int res;
+  int log;
 
   // Flush all incoming data
   ser_set_timeout_ms( stm32_ser_id, SER_NO_TIMEOUT );
@@ -76,8 +77,15 @@ static int stm32h_connect_to_bl()
 
   // Initiate communication
   ser_write_byte( stm32_ser_id, STM32_CMD_INIT );
+  printf("\nhost: init byte sent");
   res = stm32h_read_byte();
-  return res == STM32_COMM_ACK || res == STM32_COMM_NACK ? STM32_OK : STM32_INIT_ERROR;
+  while( (log = stm32h_read_byte()) != -1 )
+     printf("%c", log);
+  //printf("\n");
+  //printf("res: %c", res);
+  //return res == STM32_COMM_ACK || res == STM32_COMM_NACK ? STM32_OK : STM32_INIT_ERROR;
+  if (res == STM32_COMM_ACK) return STM32_OK;
+  else return STM32_INIT_ERROR;
 }
 
 // ****************************************************************************
@@ -90,7 +98,7 @@ int stm32_init( const char *portname, u32 baud )
     return STM32_PORT_OPEN_ERROR;
 
   // Setup port
-  ser_setup( stm32_ser_id, baud, SER_DATABITS_8, SER_PARITY_EVEN, SER_STOPBITS_1 );
+  ser_setup( stm32_ser_id, baud, SER_DATABITS_8, SER_PARITY_NONE, SER_STOPBITS_1 );
 
   // Connect to bootloader
   return stm32h_connect_to_bl();

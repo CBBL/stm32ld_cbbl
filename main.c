@@ -51,20 +51,31 @@ int main( int argc, const char **argv )
   u16 version;
   long baud;
  
+  printf("\n==========================");
+  printf("\n  CBBL host side loader   ");
+  printf("\n--------------------------");
+  printf("\nZavatta Marco, Yin Zhining");
+  printf("\nPolimi  2011/2012");
+  printf("\n==========================");
+  printf("\n");
   // Argument validation
+  /*
   if( argc != 4 )
   {
     fprintf( stderr, "Usage: stm32ld <port> <baud> <binary image name>\n" );
     exit( 1 );
   }
+  */
   errno = 0;
-  baud = strtol( argv[ 2 ], NULL, 10 );
+  //baud = strtol( argv[ 2 ], NULL, 10 );
+  baud = 115200;
   if( ( errno == ERANGE && ( baud == LONG_MAX || baud == LONG_MIN ) ) || ( errno != 0 && baud == 0 ) || ( baud < 0 ) ) 
   {
     fprintf( stderr, "Invalid baud '%s'\n", argv[ 2 ] );
     exit( 1 );
   }
-  if( ( fp = fopen( argv[ 3 ], "rb" ) ) == NULL )
+  //open binsample
+  if( ( fp = fopen("./binsample", "rb" ) ) == NULL )
   {
     fprintf( stderr, "Unable to open %s\n", argv[ 3 ] );
     exit( 1 );
@@ -77,52 +88,59 @@ int main( int argc, const char **argv )
   }
   
   // Connect to bootloader
-  if( stm32_init( argv[ 1 ], baud ) != STM32_OK )
+  // Use /dev/ttyUSB0
+  if( stm32_init("/dev/ttyUSB0", baud ) != STM32_OK )
   {
-    fprintf( stderr, "Unable to connect to bootloader\n" );
+    fprintf( stderr, "\nhost: Unable to connect to bootloader" );
     exit( 1 );
   }
+  else printf("\nhost: init succeded");
   
   // Get version
   if( stm32_get_version( &major, &minor ) != STM32_OK )
   {
-    fprintf( stderr, "Unable to get bootloader version\n" );
+    fprintf( stderr, "host: Unable to get bootloader version" );
     exit( 1 );
   }
   else
   {
-    printf( "Found bootloader version: %d.%d\n", major, minor );
+    printf( "\nhost: Found bootloader version: %d.%d", major, minor );
+    /*
     if( BL_MKVER( major, minor ) < BL_MINVERSION )
     {
-      fprintf( stderr, "Unsupported bootloader version" );
+      fprintf( stderr, "\n:Unsupported bootloader version" );
       exit( 1 );
     }
+    */
   }
   
   // Get chip ID
   if( stm32_get_chip_id( &version ) != STM32_OK )
   {
-    fprintf( stderr, "Unable to get chip ID\n" );
+    fprintf( stderr, "\nhost:Unable to get chip ID" );
     exit( 1 );
   }
   else
   {
-    printf( "Chip ID: %04X\n", version );
+    printf( "\nhost: Chip ID: %04X", version );
+    /*
     if( version != CHIP_ID )
     {
-      fprintf( stderr, "Unsupported chip ID" );
+      fprintf( stderr, "\nhost: Unsupported chip ID" );
       exit( 1 );
     }
+    */
   }
-  
+  printf( "\nhost: done, exiting");
+  exit( 1 );
   // Write unprotect
   if( stm32_write_unprotect() != STM32_OK )
   {
-    fprintf( stderr, "Unable to execute write unprotect\n" );
+    fprintf( stderr, "\n:host: Unable to execute write unprotect\n" );
     exit( 1 );
   }
   else
-    printf( "Cleared write protection.\n" );
+    printf( "\nhost: Cleared write protection.\n" );
 
   // Erase flash
   if( stm32_erase_flash() != STM32_OK )
