@@ -148,10 +148,15 @@ int stm32_get_chip_id( u16 *version )
 // Write unprotect
 int stm32_write_unprotect()
 {
+  printf("host: started write unprotect sequence");
   STM32_CHECK_INIT;
+  printf("host: CHECK_INIT succeded");
   stm32h_send_command( STM32_CMD_WRITE_UNPROTECT );
+  printf("host: write unprotect command sent, waiting for acks");
   STM32_EXPECT( STM32_COMM_ACK );
+  printf("host: first ack recevied");
   STM32_EXPECT( STM32_COMM_ACK );
+  printf("host: second ack received, reinitializing due to device reset");
   // At this point the system got a reset, so we need to re-enter BL mode
   return stm32h_connect_to_bl();
 }
