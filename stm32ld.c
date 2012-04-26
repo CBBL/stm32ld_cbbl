@@ -92,6 +92,10 @@ static int stm32h_connect_to_bl()
   else return STM32_INIT_ERROR;
 }
 
+void delay(int a) {
+	int i;
+	while (i<a) i++;
+}
 // ****************************************************************************
 // Implementation of the protocol
 
@@ -174,11 +178,13 @@ int stm32_erase_flash()
 
   STM32_CHECK_INIT;
   printf("\n\thost: started erase flash sequence");
+  delay(99);
   stm32h_send_command( STM32_CMD_ERASE_FLASH );
   STM32_EXPECT( STM32_COMM_ACK );
+  delay(99);
   printf("\n\thost: first ack received");
   ser_write_byte( stm32_ser_id, 0xFF );
-  ser_write_byte( stm32_ser_id, 0x00 );
+  //ser_write_byte( stm32_ser_id, 0x00 );
   STM32_EXPECT( STM32_COMM_ACK );
   printf("\n\thost: second ack received, returning");
   return STM32_OK;

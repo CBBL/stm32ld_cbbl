@@ -151,8 +151,6 @@ int main( int argc, const char **argv )
   else
     printf( "Erased FLASH memory.\n" );
 
-  printf( "\nhost: done, exiting");
-   exit( 1 );
   // Program flash
   setbuf( stdout, NULL );
   printf( "Programming flash ... ");
@@ -165,6 +163,7 @@ int main( int argc, const char **argv )
     printf( "\nDone.\n" );
 
   fclose( fp );
+  printf( "\nhost: done, exiting");
   return 0;
 }
            
