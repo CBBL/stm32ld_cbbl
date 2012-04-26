@@ -58,6 +58,8 @@ int main( int argc, const char **argv )
   printf("\nPolimi  2011/2012");
   printf("\n==========================");
   printf("\n");
+
+
   // Argument validation
   /*
   if( argc != 4 )
@@ -94,7 +96,7 @@ int main( int argc, const char **argv )
     fprintf( stderr, "\nhost: Unable to connect to bootloader" );
     exit( 1 );
   }
-  else printf("\nhost: init succeded");
+  //else printf("\nhost: init succeded");
   
   // Get version
   if( stm32_get_version( &major, &minor ) != STM32_OK )
@@ -131,8 +133,6 @@ int main( int argc, const char **argv )
     }
     */
   }
-  printf( "\nhost: done, exiting");
-  exit( 1 );
   // Write unprotect
   if( stm32_write_unprotect() != STM32_OK )
   {
@@ -145,12 +145,14 @@ int main( int argc, const char **argv )
   // Erase flash
   if( stm32_erase_flash() != STM32_OK )
   {
-    fprintf( stderr, "Unable to erase chip\n" );
+    fprintf( stderr, "\nUnable to erase chip\n" );
     exit( 1 );
   }
   else
     printf( "Erased FLASH memory.\n" );
 
+  printf( "\nhost: done, exiting");
+   exit( 1 );
   // Program flash
   setbuf( stdout, NULL );
   printf( "Programming flash ... ");

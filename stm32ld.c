@@ -84,7 +84,11 @@ static int stm32h_connect_to_bl()
   //printf("\n");
   //printf("res: %c", res);
   //return res == STM32_COMM_ACK || res == STM32_COMM_NACK ? STM32_OK : STM32_INIT_ERROR;
-  if (res == STM32_COMM_ACK) return STM32_OK;
+  if (res == STM32_COMM_ACK) {
+	  printf("\nhost: init succeded");
+	  return STM32_OK;
+
+  }
   else return STM32_INIT_ERROR;
 }
 
@@ -148,16 +152,18 @@ int stm32_get_chip_id( u16 *version )
 // Write unprotect
 int stm32_write_unprotect()
 {
-  printf("host: started write unprotect sequence");
+  printf("\n\thost: started write unprotect sequence");
   STM32_CHECK_INIT;
-  printf("host: CHECK_INIT succeded");
+  printf("\n\thost: CHECK_INIT succeded");
   stm32h_send_command( STM32_CMD_WRITE_UNPROTECT );
-  printf("host: write unprotect command sent, waiting for acks");
+  printf("\n\thost: write unprotect command sent, waiting for acks");
   STM32_EXPECT( STM32_COMM_ACK );
-  printf("host: first ack recevied");
+  printf("\n\thost: first ack recevied");
   STM32_EXPECT( STM32_COMM_ACK );
-  printf("host: second ack received, reinitializing due to device reset");
+  printf("\n\thost: second ack received, reinitializing due to device reset");
   // At this point the system got a reset, so we need to re-enter BL mode
+  int i;
+  while(i<999999999) i++;
   return stm32h_connect_to_bl();
 }
 
@@ -167,11 +173,14 @@ int stm32_erase_flash()
   u8 temp;
 
   STM32_CHECK_INIT;
+  printf("\n\thost: started erase flash sequence");
   stm32h_send_command( STM32_CMD_ERASE_FLASH );
   STM32_EXPECT( STM32_COMM_ACK );
+  printf("\n\thost: first ack received");
   ser_write_byte( stm32_ser_id, 0xFF );
   ser_write_byte( stm32_ser_id, 0x00 );
   STM32_EXPECT( STM32_COMM_ACK );
+  printf("\n\thost: second ack received, returning");
   return STM32_OK;
 }
 
@@ -182,6 +191,11 @@ int stm32_write_flash( p_read_data read_data_func, p_progress progress_func )
   u32 wrote = 0;
   u8 data[ STM32_WRITE_BUFSIZE + 1 ];
   u32 datalen, address = STM32_FLASH_START_ADDRESS;
+
+  printf("\n");
+  printf("Type flash base address (default 0x08005000):\n");
+  scanf("%x", &address);
+  printf("You specified:\n%d\n%x", address, address);
 
   STM32_CHECK_INIT; 
   while( 1 )
