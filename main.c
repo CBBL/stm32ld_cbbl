@@ -77,7 +77,7 @@ int main( int argc, const char **argv )
     exit( 1 );
   }
   //open binsample
-  if( ( fp = fopen("./binsample", "rb" ) ) == NULL )
+  if( ( fp = fopen("./firmware", "rb" ) ) == NULL )
   {
     fprintf( stderr, "Unable to open %s\n", argv[ 3 ] );
     exit( 1 );
@@ -140,20 +140,21 @@ int main( int argc, const char **argv )
     exit( 1 );
   }
   else
-    printf( "\nhost: Cleared write protection.\n" );
+    printf( "\nhost: Cleared write protection." );
 
   // Erase flash
   if( stm32_erase_flash() != STM32_OK )
   {
-    fprintf( stderr, "\nUnable to erase chip\n" );
+    fprintf( stderr, "\nUnable to erase chip" );
     exit( 1 );
   }
   else
-    printf( "Erased FLASH memory.\n" );
+    printf( "\nErased FLASH memory.\n" );
 
   // Program flash
   setbuf( stdout, NULL );
   printf( "Programming flash ... ");
+  //delay(999);
   if( stm32_write_flash( writeh_read_data, writeh_progress ) != STM32_OK )
   {
     fprintf( stderr, "Uanble to program FLASH memory.\n" );
