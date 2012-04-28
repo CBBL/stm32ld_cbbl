@@ -47,12 +47,13 @@ static int stm32h_send_packet_with_checksum( u8 *packet, u32 len )
 
   for( i = 0; i < len; i ++ )
     chksum ^= packet[ i ];
-  printf("\n\t\thost: len: %d, data packet: %x %x %x %x", len, *packet, *(packet+1), *(packet+2), *(packet+3));
+  if (len==4) printf("\n\t\thost: actual packet (N, N+1) length: %d, data: %x %x %x %x", len, *packet, *(packet+1), *(packet+2), *(packet+3));
+  else printf("\n\t\thost: actual packet (N, N+1) length: %d, data: %x %x %x %x %x ...", len, *packet, *(packet+1), *(packet+2), *(packet+3), *(packet+4));
   res = ser_write( stm32_ser_id, packet, len );
-  printf("\n\t\thost: res: %d", res);
-  printf("\n\t\thost: checksum: %d dec, %x hex", chksum, chksum);
+  printf("\n\t\thost: bytes actually sent: %d", res);
+  printf("\n\t\thost: checksum: %x", chksum);
   res = ser_write_byte( stm32_ser_id, chksum );
-  printf("\n\t\thost: res: %d", res);
+  printf("\n\t\thost: bytes actually sent: %d", res);
   return STM32_OK;
 }
 
@@ -160,15 +161,16 @@ int stm32_get_chip_id( u16 *version )
 // Write unprotect
 int stm32_write_unprotect()
 {
-  printf("\n\thost: started write unprotect sequence");
+  printf("\nhost: starting write unprotect sequence");
   STM32_CHECK_INIT;
-  printf("\n\thost: CHECK_INIT succeded");
+  //printf("\n\thost: CHECK_INIT succeded");
   stm32h_send_command( STM32_CMD_WRITE_UNPROTECT );
-  printf("\n\thost: write unprotect command sent, waiting for acks");
+  //printf("\n\thost: write unprotect command sent, waiting for acks");
   STM32_EXPECT( STM32_COMM_ACK );
-  printf("\n\thost: first ack recevied");
+  printf("\n\thost: ack received (write unprotect request)");
   STM32_EXPECT( STM32_COMM_ACK );
-  printf("\n\thost: second ack received, reinitializing due to device reset");
+  printf("\n\thost: ack received (Flash unprotected successfully)");
+  printf("\n\thost: reinitializing due to device reset");
   // At this point the system got a reset, so we need to re-enter BL mode
   int i;
   while(i<999999999) i++;
@@ -181,22 +183,24 @@ int stm32_erase_flash()
   u8 temp;
   int cbbltest;
   STM32_CHECK_INIT;
-  printf("\n\thost: started erase flash sequence");
-  delay(999);
+  printf("\nhost: starting erase flash sequence");
+  delay(99);
   stm32h_send_command( STM32_CMD_ERASE_FLASH );
   cbbltest = stm32h_read_byte();
   printf("\n\thost: received value %x", cbbltest);
   if(cbbltest != STM32_COMM_ACK) return STM32_COMM_ERROR;
-  delay(999);
-  printf("\n\thost: first ack received");
+  delay(99);
+  printf("\n\thost: ack received (erase memory request)");
   ser_write_byte( stm32_ser_id, 0xFF );
   //ser_write_byte( stm32_ser_id, 0x00 );
-  delay(999);
+  delay(99);
   cbbltest = stm32h_read_byte();
+  /*
   if (cbbltest == -1) printf("\n\tread byte failed, %x, %d", cbbltest, cbbltest);
   else printf("\n\thost: received value %x, %d", cbbltest, cbbltest);
+  */
   if(cbbltest != STM32_COMM_ACK) return STM32_COMM_ERROR;
-  printf("\n\thost: second ack received, returning");
+  printf("\n\thost: ack received (erase procedure successful)");
   return STM32_OK;
 }
 
@@ -211,45 +215,45 @@ int stm32_write_flash( p_read_data read_data_func, p_progress progress_func )
   printf("\nhost: starting to write memory");
 
   printf("\n");
-  printf("Type flash base address (default 0x08005000):\n");
+  printf("host: Type flash base address (default 0x08005000):\n");
   scanf("%x", &address);
-  printf("You specified:\n%d\n%x", address, address);
+  printf("host: programming Flash starting from: %x", address, address);
 
   STM32_CHECK_INIT; 
   while( 1 )
   {
-	delay(999);
+	delay(99);
     // Read data to program
     if( ( datalen = read_data_func( data + 1, STM32_WRITE_BUFSIZE ) ) == 0 ) {
-    printf("\n\thost: datalen is %d", datalen);
+    printf("\n\thost: bin code packet length is %d", datalen);
       break;
     }
-    printf("\n\thost: datalen is %d", datalen);
+    printf("\n\thost: bin code packet length is %d", datalen);
     data[ 0 ] = ( u8 )( datalen - 1 );
 
     // Send write request
-    delay(999);
+    delay(99);
     printf("\n\thost: sending write request command, 0x31");
     stm32h_send_command( STM32_CMD_WRITE_FLASH );
     STM32_EXPECT( STM32_COMM_ACK );
-    printf("\n\thost: first ack received");
+    printf("\n\thost: ack received (write request ack)");
     
     // Send address
-    delay(999);
-    printf("\n\thost: sending address");
+    delay(99);
+    printf("\n\thost: sending address: %x", address);
     stm32h_send_address( address );
     STM32_EXPECT( STM32_COMM_ACK );
-    printf("\n\thost: second ack received (address ok)");
+    printf("\n\thost: ack received (address ok)");
 
     // Send data
-    delay(999);
+    delay(99);
     printf("\n\thost: sending data...");
     stm32h_send_packet_with_checksum( data, datalen + 1 );
-    delay(9999);
+    delay(99);
     cbbltest = stm32h_read_byte();
     if (cbbltest == -1) printf("\n\tread byte failed, %x, %d", cbbltest, cbbltest);
     if(cbbltest != STM32_COMM_ACK) return STM32_COMM_ERROR;
-    printf("\n\thost: data ack received");
+    printf("\n\thost: ack received (data packet ok)");
 
     // Call progress function (if provided)
     wrote += datalen;
@@ -259,7 +263,7 @@ int stm32_write_flash( p_read_data read_data_func, p_progress progress_func )
     // Advance to next data
     address += datalen;
   }
-  printf("\n\thost: returning, write successful ");
+  printf("\n\thost: returning, write successful");
   return STM32_OK;
 }
 

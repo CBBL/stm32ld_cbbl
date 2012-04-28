@@ -37,7 +37,7 @@ static void writeh_progress( u32 wrote )
 
   if( pwrite >= expected_next )
   {
-    printf( "%d%% ", expected_next );
+    printf( "\n\thost: progress %d%% ", expected_next);
     expected_next += 10;
   }
 }
@@ -76,7 +76,7 @@ int main( int argc, const char **argv )
     fprintf( stderr, "Invalid baud '%s'\n", argv[ 2 ] );
     exit( 1 );
   }
-  //open binsample
+  //open firmware to be loaded
   if( ( fp = fopen("./firmware", "rb" ) ) == NULL )
   {
     fprintf( stderr, "Unable to open %s\n", argv[ 3 ] );
@@ -91,6 +91,8 @@ int main( int argc, const char **argv )
   
   // Connect to bootloader
   // Use /dev/ttyUSB0
+  printf( "\nhost: Initializing communication with the device");
+
   if( stm32_init("/dev/ttyUSB0", baud ) != STM32_OK )
   {
     fprintf( stderr, "\nhost: Unable to connect to bootloader" );
@@ -149,11 +151,11 @@ int main( int argc, const char **argv )
     exit( 1 );
   }
   else
-    printf( "\nErased FLASH memory.\n" );
+    printf( "\nhost: Erased FLASH memory.\n" );
 
   // Program flash
   setbuf( stdout, NULL );
-  printf( "Programming flash ... ");
+  printf( "host: Programming flash ... ");
   //delay(999);
   if( stm32_write_flash( writeh_read_data, writeh_progress ) != STM32_OK )
   {
@@ -161,10 +163,10 @@ int main( int argc, const char **argv )
     exit( 1 );
   }
   else
-    printf( "\nDone.\n" );
+    printf( "\nhost: write memory successfully completed." );
 
   fclose( fp );
-  printf( "\nhost: done, exiting");
+  printf( "\n\nhost: Done!");
   return 0;
 }
            
