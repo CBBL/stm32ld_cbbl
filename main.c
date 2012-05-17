@@ -166,6 +166,10 @@ int main( int argc, const char **argv )
     printf( "\nhost: write memory successfully completed." );
 
   fclose( fp );
+  printf( "\nhost: Jumping to app... ");
+  // Jump to app
+  stm32_jump();
+
   printf( "\n\nhost: Done!");
   return 0;
 }

@@ -172,8 +172,8 @@ int stm32_write_unprotect()
   printf("\n\thost: ack received (Flash unprotected successfully)");
   printf("\n\thost: reinitializing due to device reset");
   // At this point the system got a reset, so we need to re-enter BL mode
-  int i;
-  while(i<999999999) i++;
+  //int i;
+  //while(i<99) i++;
   return stm32h_connect_to_bl();
 }
 
@@ -184,12 +184,12 @@ int stm32_erase_flash()
   int cbbltest;
   STM32_CHECK_INIT;
   printf("\nhost: starting erase flash sequence");
-  delay(99);
+  //delay(9);
   stm32h_send_command( STM32_CMD_ERASE_FLASH );
   cbbltest = stm32h_read_byte();
   printf("\n\thost: received value %x", cbbltest);
   if(cbbltest != STM32_COMM_ACK) return STM32_COMM_ERROR;
-  delay(99);
+  //delay(9);
   printf("\n\thost: ack received (erase memory request)");
   ser_write_byte( stm32_ser_id, 0xFF );
   //ser_write_byte( stm32_ser_id, 0x00 );
@@ -222,7 +222,7 @@ int stm32_write_flash( p_read_data read_data_func, p_progress progress_func )
   STM32_CHECK_INIT; 
   while( 1 )
   {
-	delay(99);
+	//delay(9);
     // Read data to program
     if( ( datalen = read_data_func( data + 1, STM32_WRITE_BUFSIZE ) ) == 0 ) {
     printf("\n\thost: bin code packet length is %d", datalen);
@@ -232,24 +232,24 @@ int stm32_write_flash( p_read_data read_data_func, p_progress progress_func )
     data[ 0 ] = ( u8 )( datalen - 1 );
 
     // Send write request
-    delay(99);
+    //delay(9);
     printf("\n\thost: sending write request command, 0x31");
     stm32h_send_command( STM32_CMD_WRITE_FLASH );
     STM32_EXPECT( STM32_COMM_ACK );
     printf("\n\thost: ack received (write request ack)");
     
     // Send address
-    delay(99);
+    //delay(9);
     printf("\n\thost: sending address: %x", address);
     stm32h_send_address( address );
     STM32_EXPECT( STM32_COMM_ACK );
     printf("\n\thost: ack received (address ok)");
 
     // Send data
-    delay(99);
+    //delay(9);
     printf("\n\thost: sending data...");
     stm32h_send_packet_with_checksum( data, datalen + 1 );
-    delay(99);
+    //delay(9);
     cbbltest = stm32h_read_byte();
     if (cbbltest == -1) printf("\n\tread byte failed, %x, %d", cbbltest, cbbltest);
     if(cbbltest != STM32_COMM_ACK) return STM32_COMM_ERROR;
@@ -265,5 +265,20 @@ int stm32_write_flash( p_read_data read_data_func, p_progress progress_func )
   }
   printf("\n\thost: returning, write successful");
   return STM32_OK;
+}
+
+int stm32_jump() {
+	u32 address;
+	printf("\n");
+	printf("host: Type address to jump to(default 0x08005000):\n");
+	scanf("%x", &address);
+	printf("host: jumping to: %x", address, address);
+	stm32h_send_command( STM32_CMD_GO );
+	STM32_EXPECT( STM32_COMM_ACK );
+	printf("\n\thost: ack received (jump request)");
+	stm32h_send_address( address );
+	STM32_EXPECT( STM32_COMM_ACK );
+	printf("\n\thost: ack received (address ok)");
+	return STM32_OK;
 }
 
