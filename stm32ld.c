@@ -215,7 +215,7 @@ int stm32_write_flash( p_read_data read_data_func, p_progress progress_func )
   printf("\nhost: starting to write memory");
 
   printf("\n");
-  printf("host: Type flash base address (default 0x08005000):\n");
+  printf("host: Type flash base address (default 0x08005000 6!!!!!!):\n");
   scanf("%x", &address);
   printf("host: programming Flash starting from: %x", address, address);
 
