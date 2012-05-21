@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
+#include <libpcan.h>
+#include <fcntl.h>
 
 static FILE *fp;
 static u32 fpsize;
@@ -59,6 +61,10 @@ int main( int argc, const char **argv )
   printf("\n==========================");
   printf("\n");
 
+  int device=1;
+  printf("\n");
+  printf("host: please select communication peripheral (1 for serial, 2 for CAN):\n");
+  scanf("%d", &device);
 
   // Argument validation
   /*
@@ -92,6 +98,15 @@ int main( int argc, const char **argv )
   // Connect to bootloader
   // Use /dev/ttyUSB0
   printf( "\nhost: Initializing communication with the device");
+
+  printf( "\nhost: opening Peak CAN driver now");
+  h = LINUX_CAN_Open("/dev/pcan0", O_RDWR);
+  if (h==NULL) fprintf(stderr,"\nhost: Peak CAN driver open fail");
+
+
+
+
+
 
   if( stm32_init("/dev/ttyUSB0", baud ) != STM32_OK )
   {

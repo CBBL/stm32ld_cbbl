@@ -7,6 +7,7 @@
 
 static ser_handler stm32_ser_id = ( ser_handler )-1;
 
+
 #define STM32_RETRY_COUNT             10
 
 // ****************************************************************************
@@ -26,6 +27,26 @@ static ser_handler stm32_ser_id = ( ser_handler )-1;
   if( ( x = stm32h_read_byte() ) == -1 )\
     return STM32_COMM_ERROR;
 
+static u8 stm32h_CANread() {
+	TPCANRdMsg msgt;
+	TPCANMsg msg;
+	int ret;
+	ret = LINUX_CAN_Read(h, &msgt);
+	msg = msgt.Msg;
+	return msg.DATA[0];
+}
+
+static void stm32h_CANwrite(u8 data ) {
+	TPCANMsg msg;
+	msg.DATA[0]=data;
+	int i;
+	for (i=1; i<8; i++) msg.DATA[i]=0;
+	msg.LEN=1;
+	msg.ID=0;
+	msg.MSGTYPE=MSGTYPE_STANDARD;
+	CAN_Write(h, &msg);
+}
+
 // Helper: send a command to the STM32 chip
 static int stm32h_send_command( u8 cmd )
 {
@@ -36,6 +57,7 @@ static int stm32h_send_command( u8 cmd )
 // Helper: read a byte from STM32 with timeout
 static int stm32h_read_byte()
 {
+
   return ser_read_byte( stm32_ser_id );
 }
 

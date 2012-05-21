@@ -4,6 +4,15 @@
 #define __STM32LD_H__
 
 #include "type.h"
+#include <fcntl.h>
+#include <libpcan.h>
+
+// Global variable for the device to be used
+int comm_peripheral;
+#define CAN 2
+#define USART 1
+
+HANDLE h;
 
 // Error codes
 enum
