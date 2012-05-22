@@ -27,7 +27,7 @@ static ser_handler stm32_ser_id = ( ser_handler )-1;
   if( ( x = stm32h_read_byte() ) == -1 )\
     return STM32_COMM_ERROR;
 
-static u8 stm32h_CANread() {
+static u8 stm32h_CANread_byte() {
 	TPCANRdMsg msgt;
 	TPCANMsg msg;
 	int ret;
@@ -36,7 +36,7 @@ static u8 stm32h_CANread() {
 	return msg.DATA[0];
 }
 
-static void stm32h_CANwrite(u8 data ) {
+static void stm32h_CANwrite_byte(u8 data) {
 	TPCANMsg msg;
 	msg.DATA[0]=data;
 	int i;
@@ -304,3 +304,55 @@ int stm32_jump() {
 	return STM32_OK;
 }
 
+int stm32_read_flash(FILE* fflash) {
+
+	u32 address, length = 255;
+	u8 data[length+1];
+	int numwritten;
+
+	printf("\nhost: starting to read memory");
+	printf("\n");
+	printf("host: Type flash base address (default 0x08005000 6!!!!!!):\n");
+	scanf("%x", &address);
+	printf("host: reading Flash starting from: %x", address);
+
+	for(; address<STM32_FLASH_END_ADDRESS; address=address+length+1) {
+
+		//send command
+		printf("\n\thost: sending read request command, 0x11");
+		stm32h_send_command( STM32_CMD_READ_FLASH );
+		STM32_EXPECT( STM32_COMM_ACK );
+		printf("\n\thost: ack received (read request ack)");
+
+		//send address
+		printf("\n\thost: sending address: %x", address);
+		stm32h_send_address( address );
+		STM32_EXPECT( STM32_COMM_ACK );
+		printf("\n\thost: ack received (address ok)");
+
+		//sending data length
+		printf("\n\thost: sending data length to read...");
+		if (STM32_OK == stm32h_send_packet_with_checksum(&length, 1));
+		STM32_EXPECT( STM32_COMM_ACK );
+		printf("\n\thost: ack received (data length ok)...");
+
+		printf("\n\thost: receiving data from flash...");
+		int i;
+		int cont;
+		printf("\n\t\thost: address %x", address);
+		for (i=0; i<length+1; i++) {
+				//delay(9999);
+				cont=stm32h_read_byte();
+				if (cont==-1) printf("\n\t\thost: !!!!!!!!!ERROR!!!!!!!!!!");
+				else if (address==134348544) { //last loop check
+					printf("\n\t\thost: last iter %d",i);
+					data[i]=(u8)cont;
+				}
+				else data[i]=(u8)cont;
+		}
+		numwritten = fwrite( data, sizeof(u8), length+1, fflash);
+		printf("\n\t\thost: bytes written to file %d", numwritten);
+	}
+	fclose(fflash);
+	printf("\n\thost: data received");
+}

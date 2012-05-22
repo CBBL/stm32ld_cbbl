@@ -9,7 +9,9 @@
 #include <fcntl.h>
 
 static FILE *fp;
+static FILE *fflash;
 static u32 fpsize;
+static u32 fflashsize;
 
 #define BL_VERSION_MAJOR  2
 #define BL_VERSION_MINOR  1
@@ -95,6 +97,21 @@ int main( int argc, const char **argv )
     fseek( fp, 0, SEEK_SET );
   }
   
+  //open file for the read memory
+  if( ( fflash = fopen("./flashmemory", "wb" ) ) == NULL )
+  {
+    fprintf( stderr, "Unable to open flashmemory file");
+    exit( 1 );
+  }
+  else
+  {
+    fseek( fflash, 0, SEEK_END );
+    fflashsize = ftell( fp );
+    fseek( fflash, 0, SEEK_SET );
+  }
+
+
+
   // Connect to bootloader
   // Use /dev/ttyUSB0
   printf( "\nhost: Initializing communication with the device");
@@ -179,6 +196,11 @@ int main( int argc, const char **argv )
   }
   else
     printf( "\nhost: write memory successfully completed." );
+
+
+  stm32_read_flash(fflash);
+
+
 
   fclose( fp );
   printf( "\nhost: Jumping to app... ");
