@@ -53,7 +53,7 @@ int main( int argc, const char **argv )
 {
   u8 minor, major;
   u16 version;
-  long baud;
+  long baud  = 115200;
  
   printf("\n==========================");
   printf("\n  CBBL host side loader   ");
@@ -63,10 +63,16 @@ int main( int argc, const char **argv )
   printf("\n==========================");
   printf("\n");
 
+  printf( "\nRequires input: firmware.bin, manual specification of FLASH base address\n for the program to be loaded");
+  printf( "\nProduces output: flashmemory.bin" );
+  printf( "\n");
+
+  /*
   int device=1;
   printf("\n");
   printf("host: please select communication peripheral (1 for serial, 2 for CAN):\n");
   scanf("%d", &device);
+  */
 
   // Argument validation
   /*
@@ -78,16 +84,17 @@ int main( int argc, const char **argv )
   */
   errno = 0;
   //baud = strtol( argv[ 2 ], NULL, 10 );
-  baud = 115200;
+
   if( ( errno == ERANGE && ( baud == LONG_MAX || baud == LONG_MIN ) ) || ( errno != 0 && baud == 0 ) || ( baud < 0 ) ) 
   {
     fprintf( stderr, "Invalid baud '%s'\n", argv[ 2 ] );
     exit( 1 );
   }
+
   //open firmware to be loaded
-  if( ( fp = fopen("./firmware", "rb" ) ) == NULL )
+  if( ( fp = fopen("./firmware.bin", "rb" ) ) == NULL )
   {
-    fprintf( stderr, "Unable to open %s\n", argv[ 3 ] );
+    fprintf( stderr, "Unable to open ./firmware.bin file\n");
     exit( 1 );
   }
   else
@@ -97,10 +104,11 @@ int main( int argc, const char **argv )
     fseek( fp, 0, SEEK_SET );
   }
   
-  //open file for the read memory
-  if( ( fflash = fopen("./flashmemory", "wb" ) ) == NULL )
+  // open file for read memory
+  // file will be created and opened in write mode if non existing (wb option)
+  if( ( fflash = fopen("./flashmemory.bin", "wb" ) ) == NULL )
   {
-    fprintf( stderr, "Unable to open flashmemory file");
+    fprintf( stderr, "Unable to open flashmemory.bin file");
     exit( 1 );
   }
   else
@@ -110,19 +118,15 @@ int main( int argc, const char **argv )
     fseek( fflash, 0, SEEK_SET );
   }
 
-
-
   // Connect to bootloader
   // Use /dev/ttyUSB0
   printf( "\nhost: Initializing communication with the device");
 
+  /*
   printf( "\nhost: opening Peak CAN driver now");
   h = LINUX_CAN_Open("/dev/pcan0", O_RDWR);
   if (h==NULL) fprintf(stderr,"\nhost: Peak CAN driver open fail");
-
-
-
-
+  */
 
 
   if( stm32_init("/dev/ttyUSB0", baud ) != STM32_OK )
@@ -130,7 +134,7 @@ int main( int argc, const char **argv )
     fprintf( stderr, "\nhost: Unable to connect to bootloader" );
     exit( 1 );
   }
-  //else printf("\nhost: init succeded");
+    else printf("\nhost: init succeded");
   
   // Get version
   if( stm32_get_version( &major, &minor ) != STM32_OK )
@@ -167,6 +171,7 @@ int main( int argc, const char **argv )
     }
     */
   }
+
   // Write unprotect
   if( stm32_write_unprotect() != STM32_OK )
   {
@@ -188,23 +193,34 @@ int main( int argc, const char **argv )
   // Program flash
   setbuf( stdout, NULL );
   printf( "host: Programming flash ... ");
-  //delay(999);
   if( stm32_write_flash( writeh_read_data, writeh_progress ) != STM32_OK )
   {
-    fprintf( stderr, "Uanble to program FLASH memory.\n" );
+    fprintf( stderr, "Unable to program FLASH memory.\n" );
     exit( 1 );
   }
   else
     printf( "\nhost: write memory successfully completed." );
 
+  // Read flash
+  printf( "host: Reading flash ... ");
+  if( stm32_read_flash(fflash) != STM32_OK )
+  {
+    fprintf( stderr, "Unable to read FLASH memory.\n" );
+    exit( 1 );
+  }
+  else {
+    fseek( fflash, 0, SEEK_END );
+    fflashsize = ftell( fflash );
+    fseek( fflash, 0, SEEK_SET );
+    printf( "\nhost: FLASH memory successfully read (%d bytes). Binary output in flashmemory.bin",fflashsize);
+  }
 
-  stm32_read_flash(fflash);
-
-
-
+  // Close files
+  fclose( fflash );
   fclose( fp );
-  printf( "\nhost: Jumping to app... ");
+
   // Jump to app
+  printf( "\nhost: Jumping to app... ");
   stm32_jump();
 
   printf( "\n\nhost: Done!");

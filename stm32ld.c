@@ -112,9 +112,7 @@ static int stm32h_connect_to_bl()
   //printf("res: %c", res);
   //return res == STM32_COMM_ACK || res == STM32_COMM_NACK ? STM32_OK : STM32_INIT_ERROR;
   if (res == STM32_COMM_ACK) {
-	  printf("\nhost: init succeded");
 	  return STM32_OK;
-
   }
   else return STM32_INIT_ERROR;
 }
@@ -237,7 +235,7 @@ int stm32_write_flash( p_read_data read_data_func, p_progress progress_func )
   printf("\nhost: starting to write memory");
 
   printf("\n");
-  printf("host: Type flash base address (default 0x08005000 6!!!!!!):\n");
+  printf("host: Type flash base address (default 0x08006000):\n");
   scanf("%x", &address);
   printf("host: programming Flash starting from: %x", address, address);
 
@@ -292,7 +290,7 @@ int stm32_write_flash( p_read_data read_data_func, p_progress progress_func )
 int stm32_jump() {
 	u32 address;
 	printf("\n");
-	printf("host: Type address to jump to(default 0x08005000):\n");
+	printf("host: Type address to jump to (default 0x08006000):\n");
 	scanf("%x", &address);
 	printf("host: jumping to: %x", address, address);
 	stm32h_send_command( STM32_CMD_GO );
@@ -309,12 +307,13 @@ int stm32_read_flash(FILE* fflash) {
 	u32 address, length = 255;
 	u8 data[length+1];
 	int numwritten;
+	int i;
 
 	printf("\nhost: starting to read memory");
 	printf("\n");
-	printf("host: Type flash base address (default 0x08005000 6!!!!!!):\n");
+	printf("host: Type flash base address (default 0x08006000):\n");
 	scanf("%x", &address);
-	printf("host: reading Flash starting from: %x", address);
+	printf("host: reading Flash starting from %x until %x", address, STM32_FLASH_END_ADDRESS);
 
 	for(; address<STM32_FLASH_END_ADDRESS; address=address+length+1) {
 
@@ -337,22 +336,21 @@ int stm32_read_flash(FILE* fflash) {
 		printf("\n\thost: ack received (data length ok)...");
 
 		printf("\n\thost: receiving data from flash...");
-		int i;
-		int cont;
-		printf("\n\t\thost: address %x", address);
+		//int cont;
+		//printf("\n\t\thost: address %x", address);
 		for (i=0; i<length+1; i++) {
 				//delay(9999);
-				cont=stm32h_read_byte();
-				if (cont==-1) printf("\n\t\thost: !!!!!!!!!ERROR!!!!!!!!!!");
-				else if (address==134348544) { //last loop check
-					printf("\n\t\thost: last iter %d",i);
-					data[i]=(u8)cont;
-				}
-				else data[i]=(u8)cont;
+			data[i]=(u8)stm32h_read_byte();
+				//if (cont==-1) printf("\n\t\thost: !!!!!!!!!ERROR!!!!!!!!!!");
+				//else if (address==134348544) { //last loop check
+					//printf("\n\t\thost: last iter %d",i);
+					//cont;
+				//}
+				//else data[i]=(u8)cont;
 		}
 		numwritten = fwrite( data, sizeof(u8), length+1, fflash);
 		printf("\n\t\thost: bytes written to file %d", numwritten);
 	}
-	fclose(fflash);
 	printf("\n\thost: data received");
+	return STM32_OK;
 }
