@@ -27,26 +27,6 @@ static ser_handler stm32_ser_id = ( ser_handler )-1;
   if( ( x = stm32h_read_byte() ) == -1 )\
     return STM32_COMM_ERROR;
 
-static u8 stm32h_CANread_byte() {
-	TPCANRdMsg msgt;
-	TPCANMsg msg;
-	int ret;
-	ret = LINUX_CAN_Read(h, &msgt);
-	msg = msgt.Msg;
-	return msg.DATA[0];
-}
-
-static void stm32h_CANwrite_byte(u8 data) {
-	TPCANMsg msg;
-	msg.DATA[0]=data;
-	int i;
-	for (i=1; i<8; i++) msg.DATA[i]=0;
-	msg.LEN=1;
-	msg.ID=0;
-	msg.MSGTYPE=MSGTYPE_STANDARD;
-	CAN_Write(h, &msg);
-}
-
 // Helper: send a command to the STM32 chip
 static int stm32h_send_command( u8 cmd )
 {
@@ -94,8 +74,7 @@ static int stm32h_send_address( u32 address )
 // Helper: intiate BL communication
 static int stm32h_connect_to_bl()
 {
-  int res;
-  int log;
+  int res, log;
 
   // Flush all incoming data
   ser_set_timeout_ms( stm32_ser_id, SER_NO_TIMEOUT );
@@ -115,6 +94,26 @@ static int stm32h_connect_to_bl()
 	  return STM32_OK;
   }
   else return STM32_INIT_ERROR;
+}
+
+static u8 stm32h_CANread_byte() {
+	TPCANRdMsg msgt;
+	TPCANMsg msg;
+	int ret;
+	ret = LINUX_CAN_Read(h, &msgt);
+	msg = msgt.Msg;
+	return msg.DATA[0];
+}
+
+static void stm32h_CANwrite_byte(u8 data) {
+	TPCANMsg msg;
+	msg.DATA[0]=data;
+	int i;
+	for (i=1; i<8; i++) msg.DATA[i]=0;
+	msg.LEN=1;
+	msg.ID=0;
+	msg.MSGTYPE=MSGTYPE_STANDARD;
+	CAN_Write(h, &msg);
 }
 
 void delay(int a) {
@@ -304,11 +303,12 @@ int stm32_jump() {
 
 int stm32_read_flash(FILE* fflash) {
 
-	u32 address, length = 255;
+	u32 address;
+	u8 length = 255;
 	u8 data[length+1];
-	int numwritten;
-	int i;
+	int numwritten, i;
 
+	//ask base address to user
 	printf("\nhost: starting to read memory");
 	printf("\n");
 	printf("host: Type flash base address (default 0x08006000):\n");
@@ -335,22 +335,14 @@ int stm32_read_flash(FILE* fflash) {
 		STM32_EXPECT( STM32_COMM_ACK );
 		printf("\n\thost: ack received (data length ok)...");
 
+		//receiving bytes
 		printf("\n\thost: receiving data from flash...");
-		//int cont;
-		//printf("\n\t\thost: address %x", address);
 		for (i=0; i<length+1; i++) {
-				//delay(9999);
 			data[i]=(u8)stm32h_read_byte();
-				//if (cont==-1) printf("\n\t\thost: !!!!!!!!!ERROR!!!!!!!!!!");
-				//else if (address==134348544) { //last loop check
-					//printf("\n\t\thost: last iter %d",i);
-					//cont;
-				//}
-				//else data[i]=(u8)cont;
 		}
 		numwritten = fwrite( data, sizeof(u8), length+1, fflash);
 		printf("\n\t\thost: bytes written to file %d", numwritten);
+
 	}
-	printf("\n\thost: data received");
 	return STM32_OK;
 }
