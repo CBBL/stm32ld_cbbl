@@ -315,6 +315,8 @@ int stm32_read_flash(FILE* fflash) {
 	scanf("%x", &address);
 	printf("host: reading Flash starting from %x until %x", address, STM32_FLASH_END_ADDRESS);
 
+	//one instance of the command allows to fetch 256 bytes maximum due to protocol specification
+	//length=255 to fit it into u8, representing 256 bytes (0-255)
 	for(; address<STM32_FLASH_END_ADDRESS; address=address+length+1) {
 
 		//send command
