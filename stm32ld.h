@@ -14,6 +14,8 @@ int comm_peripheral;
 
 HANDLE h;
 
+int devselection;
+
 // Error codes
 enum
 {
@@ -60,6 +62,9 @@ int stm32_write_unprotect();
 int stm32_erase_flash();
 int stm32_write_flash( p_read_data read_data_func, p_progress progress_func );
 int stm32_jump();
+u8 stm32h_CANread_byte();
+void stm32h_CANwrite_byte(u8 data);
+int stm32_CAN_init ();
 
 #endif
 

@@ -20,6 +20,7 @@ static u32 fflashsize;
 
 #define CHIP_ID           0x0414
 
+
 // ****************************************************************************
 // Helper functions and macros
 
@@ -118,15 +119,39 @@ int main( int argc, const char **argv )
     fseek( fflash, 0, SEEK_SET );
   }
 
+
+  //ask base address to user
+  printf("\nhost: Which device do you wanna use (1 USART, 2 CAN) ?");
+  printf("\n");
+  scanf("%d", &devselection);
+  printf("host: devselection: %d", devselection);
+
+
   // Connect to bootloader
   // Use /dev/ttyUSB0
   printf( "\nhost: Initializing communication with the device");
 
+
   /*
+
   printf( "\nhost: opening Peak CAN driver now");
-  h = LINUX_CAN_Open("/dev/pcan0", O_RDWR);
+  h = LINUX_CAN_Open("/dev/pcanusb0", O_RDWR);
   if (h==NULL) fprintf(stderr,"\nhost: Peak CAN driver open fail");
+
+
+  stm32_CAN_init();
+
+  stm32h_CANwrite_byte(STM32_CMD_INIT);
+
+  u8 rec = 0;
+
+  rec = stm32h_CANread_byte();
+  if (rec == STM32_COMM_ACK) printf( "\nhost: !!! ACK RECEIVED !!!");
+  else printf( "\nhost: ACK NOT RECEIVED, I GOT: %x", rec);
+
   */
+
+
 
 
   if( stm32_init("/dev/ttyUSB0", baud ) != STM32_OK )
@@ -135,6 +160,7 @@ int main( int argc, const char **argv )
     exit( 1 );
   }
     else printf("\nhost: init succeded");
+
   
   // Get version
   if( stm32_get_version( &major, &minor ) != STM32_OK )

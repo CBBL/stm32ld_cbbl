@@ -30,15 +30,25 @@ static ser_handler stm32_ser_id = ( ser_handler )-1;
 // Helper: send a command to the STM32 chip
 static int stm32h_send_command( u8 cmd )
 {
-  ser_write_byte( stm32_ser_id, cmd );
-  ser_write_byte( stm32_ser_id, ~cmd );
+
+  if (devselection == USART) {
+	  ser_write_byte( stm32_ser_id, cmd );
+	  ser_write_byte( stm32_ser_id, ~cmd );
+  }
+
+  else if (devselection == CAN) {
+	  stm32h_CANwrite_byte(cmd);
+	  delay(99);
+	  stm32h_CANwrite_byte(~cmd);
+  }
+
 }
 
 // Helper: read a byte from STM32 with timeout
 static int stm32h_read_byte()
 {
-
-  return ser_read_byte( stm32_ser_id );
+  if (devselection == USART) return ser_read_byte( stm32_ser_id );
+  else if (devselection == CAN) return stm32h_CANread_byte();
 }
 
 // Helper: append a checksum to a packet and send it
@@ -47,16 +57,37 @@ static int stm32h_send_packet_with_checksum( u8 *packet, u32 len )
   u8 chksum = 0;
   u32 i, res;
 
-  for( i = 0; i < len; i ++ )
-    chksum ^= packet[ i ];
-  if (len==4) printf("\n\t\thost: actual packet (N, N+1) length: %d, data: %x %x %x %x", len, *packet, *(packet+1), *(packet+2), *(packet+3));
-  else printf("\n\t\thost: actual packet (N, N+1) length: %d, data: %x %x %x %x %x ...", len, *packet, *(packet+1), *(packet+2), *(packet+3), *(packet+4));
-  res = ser_write( stm32_ser_id, packet, len );
-  printf("\n\t\thost: bytes actually sent: %d", res);
-  printf("\n\t\thost: checksum: %x", chksum);
-  res = ser_write_byte( stm32_ser_id, chksum );
-  printf("\n\t\thost: bytes actually sent: %d", res);
-  return STM32_OK;
+  if (devselection == USART) {
+
+	  for( i = 0; i < len; i ++ )
+		chksum ^= packet[ i ];
+	  if (len==4) printf("\n\t\thost: actual packet (N, N+1) length: %d, data: %x %x %x %x", len, *packet, *(packet+1), *(packet+2), *(packet+3));
+	  else printf("\n\t\thost: actual packet (N, N+1) length: %d, data: %x %x %x %x %x ...", len, *packet, *(packet+1), *(packet+2), *(packet+3), *(packet+4));
+	  res = ser_write( stm32_ser_id, packet, len );
+	  printf("\n\t\thost: bytes actually sent: %d", res);
+	  printf("\n\t\thost: checksum: %x", chksum);
+	  res = ser_write_byte( stm32_ser_id, chksum );
+	  printf("\n\t\thost: bytes actually sent: %d", res);
+	  return STM32_OK;
+  }
+
+  else if (devselection == CAN) {
+
+	  for( i = 0; i < len; i ++ )
+	    chksum ^= packet[ i ];
+	  if (len==4) printf("\n\t\thost: actual packet (N, N+1) length: %d, data: %x %x %x %x", len, *packet, *(packet+1), *(packet+2), *(packet+3));
+	  else printf("\n\t\thost: actual packet (N, N+1) length: %d, data: %x %x %x %x %x ...", len, *packet, *(packet+1), *(packet+2), *(packet+3), *(packet+4));
+	  //res = ser_write( stm32_ser_id, packet, len );
+
+	  for( i = 0; i < len; i ++ )
+		  stm32h_CANwrite_byte(*(packet+i));
+
+	  //printf("\n\t\thost: bytes actually sent: %d", res);
+	  printf("\n\t\thost: checksum: %x", chksum);
+	  stm32h_CANwrite_byte(chksum);
+	 // printf("\n\t\thost: bytes actually sent: %d", res);
+	  return STM32_OK;
+  }
 }
 
 // Helper: send an address to STM32
@@ -76,27 +107,46 @@ static int stm32h_connect_to_bl()
 {
   int res, log;
 
-  // Flush all incoming data
-  ser_set_timeout_ms( stm32_ser_id, SER_NO_TIMEOUT );
-  while( stm32h_read_byte() != -1 );
-  ser_set_timeout_ms( stm32_ser_id, STM32_COMM_TIMEOUT );
+  if (devselection == USART) {
 
-  // Initiate communication
-  ser_write_byte( stm32_ser_id, STM32_CMD_INIT );
-  printf("\nhost: init byte sent");
-  res = stm32h_read_byte();
-  while( (log = stm32h_read_byte()) != -1 )
-     printf("%c", log);
-  //printf("\n");
-  //printf("res: %c", res);
-  //return res == STM32_COMM_ACK || res == STM32_COMM_NACK ? STM32_OK : STM32_INIT_ERROR;
-  if (res == STM32_COMM_ACK) {
-	  return STM32_OK;
+	  // Flush all incoming data
+	  ser_set_timeout_ms( stm32_ser_id, SER_NO_TIMEOUT );
+	  while( stm32h_read_byte() != -1 );
+	  ser_set_timeout_ms( stm32_ser_id, STM32_COMM_TIMEOUT );
+
+	  // Initiate communication
+	  ser_write_byte( stm32_ser_id, STM32_CMD_INIT );
+	  printf("\nhost: init byte sent");
+	  res = stm32h_read_byte();
+	  //while( (log = stm32h_read_byte()) != -1 )
+		// printf("%c", log);
+	  //printf("\n");
+	  //printf("res: %c", res);
+	  //return res == STM32_COMM_ACK || res == STM32_COMM_NACK ? STM32_OK : STM32_INIT_ERROR;
+	  if (res == STM32_COMM_ACK) {
+		  return STM32_OK;
+	  }
+	  else return STM32_INIT_ERROR;
   }
-  else return STM32_INIT_ERROR;
+  else if (devselection == CAN) {
+	  // Initiate communication
+	  stm32h_CANwrite_byte(STM32_CMD_INIT);
+	  printf("\nhost: init byte sent");
+	  res = stm32h_CANread_byte();
+	  //while( (log = stm32h_read_byte()) != -1 )
+	 //	 printf("%c", log);
+	  //printf("\n");
+	  //printf("res: %c", res);
+	  //return res == STM32_COMM_ACK || res == STM32_COMM_NACK ? STM32_OK : STM32_INIT_ERROR;
+	  if (res == STM32_COMM_ACK) {
+	  	  return STM32_OK;
+	  }
+	  else return STM32_INIT_ERROR;
+  }
+
 }
 
-static u8 stm32h_CANread_byte() {
+u8 stm32h_CANread_byte() {
 	TPCANRdMsg msgt;
 	TPCANMsg msg;
 	int ret;
@@ -105,15 +155,16 @@ static u8 stm32h_CANread_byte() {
 	return msg.DATA[0];
 }
 
-static void stm32h_CANwrite_byte(u8 data) {
+void stm32h_CANwrite_byte(u8 data) {
 	TPCANMsg msg;
+	DWORD ret;
 	msg.DATA[0]=data;
 	int i;
 	for (i=1; i<8; i++) msg.DATA[i]=0;
 	msg.LEN=1;
 	msg.ID=0;
 	msg.MSGTYPE=MSGTYPE_STANDARD;
-	CAN_Write(h, &msg);
+	ret = CAN_Write(h, &msg);
 }
 
 void delay(int a) {
@@ -123,14 +174,28 @@ void delay(int a) {
 // ****************************************************************************
 // Implementation of the protocol
 
+int stm32_CAN_init () {
+	DWORD ret;
+	ret = CAN_Init(h, CAN_BAUD_1M , CAN_INIT_TYPE_ST);
+}
+
 int stm32_init( const char *portname, u32 baud )
 {
-  // Open port
-  if( ( stm32_ser_id = ser_open( portname ) ) == ( ser_handler )-1 )
-    return STM32_PORT_OPEN_ERROR;
+  if (devselection == CAN) {
+	  printf( "\nhost: opening Peak CAN driver now");
+	    h = LINUX_CAN_Open("/dev/pcanusb0", O_RDWR);
+	    if (h==NULL) fprintf(stderr,"\nhost: Peak CAN driver open fail");
+	    stm32_CAN_init();
+  }
 
-  // Setup port
-  ser_setup( stm32_ser_id, baud, SER_DATABITS_8, SER_PARITY_NONE, SER_STOPBITS_1 );
+  else if (devselection == USART) {
+	  // Open port
+	  if( ( stm32_ser_id = ser_open( portname ) ) == ( ser_handler )-1 )
+		return STM32_PORT_OPEN_ERROR;
+
+	  // Setup port
+	  ser_setup( stm32_ser_id, baud, SER_DATABITS_8, SER_PARITY_NONE, SER_STOPBITS_1 );
+  }
 
   // Connect to bootloader
   return stm32h_connect_to_bl();
@@ -142,22 +207,48 @@ int stm32_get_version( u8 *major, u8 *minor )
 {
   u8 i, version;
   int temp, total;
-  int tries = STM32_RETRY_COUNT;  
+  int tries = STM32_RETRY_COUNT;
 
-  STM32_CHECK_INIT;
-  stm32h_send_command( STM32_CMD_GET_COMMAND );
-  STM32_EXPECT( STM32_COMM_ACK );
-  STM32_READ_AND_CHECK( total );
-  for( i = 0; i < total + 1; i ++ )
-  {
-    STM32_READ_AND_CHECK( temp );
-    if( i == 0 )
-      version = ( u8 )temp;
+  if (devselection == USART) {
+
+	  STM32_CHECK_INIT;
+	  stm32h_send_command( STM32_CMD_GET_COMMAND );
+	  STM32_EXPECT( STM32_COMM_ACK );
+	  STM32_READ_AND_CHECK( total );
+	  for( i = 0; i < total + 1; i ++ )
+	  {
+		STM32_READ_AND_CHECK( temp );
+		if( i == 0 )
+		  version = ( u8 )temp;
+	  }
+	  *major = version >> 4;
+	  *minor = version & 0x0F;
+	  STM32_EXPECT( STM32_COMM_ACK );
+	  return STM32_OK;
   }
-  *major = version >> 4;
-  *minor = version & 0x0F;
-  STM32_EXPECT( STM32_COMM_ACK );
-  return STM32_OK;
+
+  else if (devselection == CAN) {
+
+	  //STM32_CHECK_INIT;
+
+	  stm32h_send_command( STM32_CMD_GET_COMMAND );
+	  printf("\nhost: get command sent");
+	  STM32_EXPECT( STM32_COMM_ACK );
+	  printf("\nhost: ack received");
+	  STM32_READ_AND_CHECK( total );
+	  for( i = 0; i < total + 1; i ++ )
+	  {
+	     STM32_READ_AND_CHECK( temp );
+	     if( i == 0 )
+	     version = ( u8 )temp;
+	  }
+	  *major = version >> 4;
+	  *minor = version & 0x0F;
+	  STM32_EXPECT( STM32_COMM_ACK );
+	  return STM32_OK;
+
+  }
+
 }
 
 // Get chip ID
