@@ -234,17 +234,19 @@ int stm32_get_version( u8 *major, u8 *minor )
 	  stm32h_send_command( STM32_CMD_GET_COMMAND );
 	  printf("\nhost: get command sent");
 	  STM32_EXPECT( STM32_COMM_ACK );
-	  printf("\nhost: ack received");
+	  printf("\nhost: first ack received");
 	  STM32_READ_AND_CHECK( total );
 	  for( i = 0; i < total + 1; i ++ )
 	  {
 	     STM32_READ_AND_CHECK( temp );
 	     if( i == 0 )
 	     version = ( u8 )temp;
+	     printf("\nhost: looping");
 	  }
 	  *major = version >> 4;
 	  *minor = version & 0x0F;
 	  STM32_EXPECT( STM32_COMM_ACK );
+	  printf("\nhost: second ack received");
 	  return STM32_OK;
 
   }
