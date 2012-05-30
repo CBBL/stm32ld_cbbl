@@ -38,7 +38,6 @@ static int stm32h_send_command( u8 cmd )
 
   else if (devselection == CAN) {
 	  stm32h_CANwrite_byte(cmd);
-	  delay(99);
 	  stm32h_CANwrite_byte(~cmd);
   }
 
@@ -77,7 +76,6 @@ static int stm32h_send_packet_with_checksum( u8 *packet, u32 len )
 	    chksum ^= packet[ i ];
 	  if (len==4) printf("\n\t\thost: actual packet (N, N+1) length: %d, data: %x %x %x %x", len, *packet, *(packet+1), *(packet+2), *(packet+3));
 	  else printf("\n\t\thost: actual packet (N, N+1) length: %d, data: %x %x %x %x %x ...", len, *packet, *(packet+1), *(packet+2), *(packet+3), *(packet+4));
-	  //res = ser_write( stm32_ser_id, packet, len );
 
 	  for( i = 0; i < len; i ++ )
 		  stm32h_CANwrite_byte(*(packet+i));
@@ -85,7 +83,7 @@ static int stm32h_send_packet_with_checksum( u8 *packet, u32 len )
 	  //printf("\n\t\thost: bytes actually sent: %d", res);
 	  printf("\n\t\thost: checksum: %x", chksum);
 	  stm32h_CANwrite_byte(chksum);
-	 // printf("\n\t\thost: bytes actually sent: %d", res);
+	  //printf("\n\t\thost: bytes actually sent: %d", res);
 	  return STM32_OK;
   }
 }
@@ -157,47 +155,63 @@ static int stm32h_send_byte( ser_handler stm32_ser_id, u8 byte ) {
 u8 stm32h_CANread_byte() {
 	TPCANRdMsg msgt;
 	TPCANMsg msg;
-	TPDIAG stats;
-	stats.dwErrorCounter=0;
+	//TPDIAG stats;
+	//stats.dwErrorCounter=0;
 	__u32 ret;
-	//delay(99);
 	DWORD status;
 
+	/* Fetch various CAN statistics. */
 	//LINUX_CAN_Statistics( h, &stats);
 	//printf("reads count %d.\n", stats.dwReadCounter );
 	//if (stats.dwErrorCounter!=0) fprintf( stderr, "CAN error occurred somewhen error counter: %d .\n", stats.dwErrorCounter );
+
+	/* Blocking read. */
 	ret = LINUX_CAN_Read(h, &msgt);
+	msg = msgt.Msg;
+
+	/* If error returned by CAN_Read, notify. */
 	if (ret != 0) fprintf( stderr, "CAN reception error.\n" );
+
+	/* Fetch CAN status. 0x0 means all right, 0x20 means receive queue empty, which is all right too. */
 	status = CAN_Status(h);
 	if (status !=0 && status != 0x20) fprintf( stderr, "CAN status error. status: %x \n", status);
-	msg = msgt.Msg;
+
+	/* If error detected, the PEAK manual says a STATUS packet is inserted in the receive queue
+	 * and the error code is within DATA[3]
+	 */
 	if (msg.MSGTYPE==MSGTYPE_STATUS) {
 		fprintf( stderr, "STATUS MESSAGE RECEIVED; ERROR CODE %x.\n", msg.DATA[3]);
-		return -1;
 	}
-	else {
-		return msg.DATA[0];
-	}
+
 	return msg.DATA[0];
 }
 
 void stm32h_CANwrite_byte(u8 data) {
 	TPCANMsg msg;
 	DWORD ret;
-	TPDIAG stats;
-	stats.dwErrorCounter=0;
+	//TPDIAG stats;
+	//stats.dwErrorCounter=0;
+
+	/* Initialize packet. */
 	msg.DATA[0]=data;
 	int i;
 	for (i=1; i<8; i++) msg.DATA[i]=0;
 	msg.LEN=1;
 	msg.ID=0;
 	msg.MSGTYPE=MSGTYPE_STANDARD;
-	ret = CAN_Write(h, &msg);
 
+	/* Fire!
+	 * Write blocks until a tx queue slot is found empty or an error occurred. */
+	ret = CAN_Write(h, &msg);
+	if (ret != 0 ) fprintf( stderr, "CAN transmission error.\n" );
+
+	/* Fetch various CAN statistics. */
+	/*
 	LINUX_CAN_Statistics( h, &stats);
 	//if (stats.dwErrorCounter!=0) fprintf( stderr, "CAN error occurred somewhen.\n" );
 	printf("                          writes count %d.\n", stats.dwWriteCounter );
-	if (ret != 0 ) fprintf( stderr, "CAN transmission error.\n" );;
+	*/
+
 }
 
 void delay(int a) {
