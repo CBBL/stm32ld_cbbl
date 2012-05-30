@@ -68,13 +68,6 @@ int main( int argc, const char **argv )
   printf( "\nProduces output: flashmemory.bin" );
   printf( "\n");
 
-  /*
-  int device=1;
-  printf("\n");
-  printf("host: please select communication peripheral (1 for serial, 2 for CAN):\n");
-  scanf("%d", &device);
-  */
-
   // Argument validation
   /*
   if( argc != 4 )
@@ -120,40 +113,15 @@ int main( int argc, const char **argv )
   }
 
 
-  //ask base address to user
+  // Ask communication peripheral to use
   printf("\nhost: Which device do you wanna use (1 USART, 2 CAN) ?");
   printf("\n");
   scanf("%d", &devselection);
   printf("host: devselection: %d", devselection);
 
-
   // Connect to bootloader
   // Use /dev/ttyUSB0
   printf( "\nhost: Initializing communication with the device");
-
-
-  /*
-
-  printf( "\nhost: opening Peak CAN driver now");
-  h = LINUX_CAN_Open("/dev/pcanusb0", O_RDWR);
-  if (h==NULL) fprintf(stderr,"\nhost: Peak CAN driver open fail");
-
-
-  stm32_CAN_init();
-
-  stm32h_CANwrite_byte(STM32_CMD_INIT);
-
-  u8 rec = 0;
-
-  rec = stm32h_CANread_byte();
-  if (rec == STM32_COMM_ACK) printf( "\nhost: !!! ACK RECEIVED !!!");
-  else printf( "\nhost: ACK NOT RECEIVED, I GOT: %x", rec);
-
-  */
-
-
-
-
   if( stm32_init("/dev/ttyUSB0", baud ) != STM32_OK )
   {
     fprintf( stderr, "\nhost: Unable to connect to bootloader" );
@@ -227,11 +195,13 @@ int main( int argc, const char **argv )
   else
     printf( "\nhost: write memory successfully completed." );
 
+
   // Read flash
   printf( "host: Reading flash ... ");
   if( stm32_read_flash(fflash) != STM32_OK )
   {
     fprintf( stderr, "Unable to read FLASH memory.\n" );
+    fclose( fflash );
     exit( 1 );
   }
   else {
@@ -240,6 +210,7 @@ int main( int argc, const char **argv )
     fseek( fflash, 0, SEEK_SET );
     printf( "\nhost: FLASH memory successfully read (%d bytes). Binary output in flashmemory.bin",fflashsize);
   }
+
 
   // Close files
   fclose( fflash );
@@ -251,5 +222,6 @@ int main( int argc, const char **argv )
 
   printf( "\n\nhost: Done!");
   return 0;
+
 }
            
