@@ -5,10 +5,10 @@
 #include "type.h"
 #include "stm32ld.h"
 
-static ser_handler stm32_ser_id = ( ser_handler )-1;
+// Peripheral handles
+static ser_handler stm32_ser_id = ( ser_handler )-1; //serial port
+static HANDLE h; //CAN device
 
-
-#define STM32_RETRY_COUNT             10
 
 // ****************************************************************************
 // Helper functions and macros
@@ -291,7 +291,6 @@ int stm32_get_version( u8 *major, u8 *minor )
 	     STM32_READ_AND_CHECK( temp );
 	     if( i == 0 )
 	     version = ( u8 )temp;
-	     printf("\nhost: looping");
 	  }
 	  *major = version >> 4;
 	  *minor = version & 0x0F;
@@ -446,10 +445,13 @@ int stm32_write_flash( p_read_data read_data_func, p_progress progress_func )
   int cbbltest;
   printf("\nhost: starting to write memory");
 
+  address = custombaseaddress;
+  /*
   printf("\n");
   printf("host: Type flash base address (default 0x08006000):\n");
   scanf("%x", &address);
   printf("host: programming Flash starting from: %x", address, address);
+  */
 
   //STM32_CHECK_INIT;
   while( 1 )
@@ -561,7 +563,7 @@ int stm32_read_flash(FILE* fflash) {
 		printf("\n\thost: receiving data from flash...");
 		for (i=0; i<length+1; i++) {
 			data[i]=(u8)stm32h_read_byte();
-			printf("\n\thost: data[%d]=%x", i, data[i]);
+			//("\n\thost: data[%d]=%x", i, data[i]);
 		}
 		numwritten = fwrite( data, sizeof(u8), length+1, fflash);
 		printf("\n\t\thost: bytes written to file %d", numwritten);

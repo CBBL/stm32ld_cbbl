@@ -1,11 +1,26 @@
 // Loader driver
 
+/*
+ * Uses PEAK System PCAN-USB IPEH-002021 and its library
+ */
+
+/*
+ * Usage:
+ * stm32ld [-usart,-can] [device path e.g. /dev/ttyUSB0] [-defaultbaseaddr,[-custombaseaddr, value]] [firmware file] [download file]
+ * argument order must be respected
+ * firmware file must be present in the file system
+ * download file will be created in non-existent or overwritten
+ *
+ * Example:
+ * stm32ld -usart /dev/ttyUSB0 -custombaseaddr 0x08006000 firmware.bin flashmemory.bin
+ * stm32ld -can /dev/pcanusb0 -defaultbaseaddr firmware.bin flashmemory.bin
+ */
+
 #include "stm32ld.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <limits.h>
-#include <libpcan.h>
 #include <fcntl.h>
 
 static FILE *fp;
@@ -69,26 +84,34 @@ int main( int argc, const char **argv )
   printf( "\n");
 
   // Argument validation
-  /*
-  if( argc != 4 )
+  if( argc != 5 && argc != 6 )
   {
-    fprintf( stderr, "Usage: stm32ld <port> <baud> <binary image name>\n" );
+    fprintf( stderr, "usage\nstm32ld [-usart,-can] [device path e.g. /dev/ttyUSB0]"
+    		" [firmware file] [download file] [-defaultbaseaddr,[-custombaseaddr, value]]\n" );
     exit( 1 );
   }
-  */
+
   errno = 0;
   //baud = strtol( argv[ 2 ], NULL, 10 );
 
+  // Communication peripheral selection
+  devselection = strtol( argv[0], NULL, 10);
+  printf("host: devselection: %d", devselection);
+
+  /*
   if( ( errno == ERANGE && ( baud == LONG_MAX || baud == LONG_MIN ) ) || ( errno != 0 && baud == 0 ) || ( baud < 0 ) ) 
   {
     fprintf( stderr, "Invalid baud '%s'\n", argv[ 2 ] );
     exit( 1 );
   }
+  */
 
   //open firmware to be loaded
-  if( ( fp = fopen("./firmware.bin", "rb" ) ) == NULL )
+  if( ( fp = fopen(argv[2], "rb" ) ) == NULL )
   {
-    fprintf( stderr, "Unable to open ./firmware.bin file\n");
+	fprintf( stderr, "Unable to open ");
+	fprintf( stderr, argv[2]);
+	fprintf( stderr, " file\n");
     exit( 1 );
   }
   else
@@ -100,9 +123,11 @@ int main( int argc, const char **argv )
   
   // open file for read memory
   // file will be created and opened in write mode if non existing (wb option)
-  if( ( fflash = fopen("./flashmemory.bin", "wb" ) ) == NULL )
+  if( ( fflash = fopen(argv[3], "wb" ) ) == NULL )
   {
-    fprintf( stderr, "Unable to open flashmemory.bin file");
+    fprintf( stderr, "Unable to open ");
+    fprintf( stderr, argv[3]);
+    fprintf( stderr, " file\n");
     exit( 1 );
   }
   else
@@ -114,15 +139,17 @@ int main( int argc, const char **argv )
 
 
   // Ask communication peripheral to use
+  /*
   printf("\nhost: Which device do you wanna use (1 USART, 2 CAN) ?");
   printf("\n");
   scanf("%d", &devselection);
   printf("host: devselection: %d", devselection);
+  */
 
   // Connect to bootloader
   // Use /dev/ttyUSB0
   printf( "\nhost: Initializing communication with the device");
-  if( stm32_init("/dev/ttyUSB0", baud ) != STM32_OK )
+  if( stm32_init(argv[1], baud ) != STM32_OK )
   {
     fprintf( stderr, "\nhost: Unable to connect to bootloader" );
     exit( 1 );

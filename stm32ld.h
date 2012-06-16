@@ -12,9 +12,10 @@ int comm_peripheral;
 #define CAN 2
 #define USART 1
 
-HANDLE h;
-
+// Global variable to be assigned a value either CAN or USART
 int devselection;
+
+
 
 // Error codes
 enum
@@ -33,10 +34,14 @@ enum
 #define STM32_COMM_TIMEOUT  2000000
 #define STM32_WRITE_BUFSIZE 256
 
+// Device FLASH memory data
 #define STM32_FLASH_START_ADDRESS 0x08006000
 #define STM32_FLASH_END_ADDRESS 0x08020000
 #define STM32_FLASH_PAGES_NUM 128 //absolute number
 #define STM32_FLASH_PAGES_SIZE 1024 //bytes
+
+// Global variable for the custom FLASH base address
+u32 custombaseaddress;
 
 enum
 {
@@ -65,6 +70,9 @@ int stm32_jump();
 u8 stm32h_CANread_byte();
 void stm32h_CANwrite_byte(u8 data);
 int stm32_CAN_init ();
+
+// Utils
+#define STM32_RETRY_COUNT	10
 
 #endif
 
