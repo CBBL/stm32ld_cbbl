@@ -8,7 +8,6 @@
 #include <libpcan.h>
 
 // Global variable for the device to be used
-int comm_peripheral;
 #define CAN 2
 #define USART 1
 

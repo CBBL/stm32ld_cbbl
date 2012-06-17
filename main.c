@@ -19,6 +19,7 @@
 #include "stm32ld.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <limits.h>
 #include <fcntl.h>
@@ -83,6 +84,9 @@ int main( int argc, const char **argv )
   printf( "\nProduces output: flashmemory.bin" );
   printf( "\n");
 
+  printf("argc = %d \n",argc);
+  printf("%s\n",argv[0]);
+
   // Argument validation
   if( argc != 5 && argc != 6 )
   {
@@ -91,6 +95,8 @@ int main( int argc, const char **argv )
     exit( 1 );
   }
 
+
+
   errno = 0;
   //baud = strtol( argv[ 2 ], NULL, 10 );
 
@@ -98,6 +104,20 @@ int main( int argc, const char **argv )
   devselection = strtol( argv[0], NULL, 10);
   printf("host: devselection: %d", devselection);
 
+
+  // FLASH base address
+  if (argc == 6 && strcmp(argv[4],"-custombaseaddr") == 0) {
+	  custombaseaddress = strtol( argv[5], NULL, 10);
+	  printf("host: custom base address selected: %x", custombaseaddress);
+  }
+  else if (argc == 6 && strcmp(argv[5],"-defaultbaseaddr") == 0) {
+	  custombaseaddress = STM32_FLASH_START_ADDRESS;
+	  printf("host: default base address selected: %x", custombaseaddress);
+  }
+  else {
+	  fprintf( stderr, "Cannot interpret address parameters\n" );
+	  exit(1);
+  }
   /*
   if( ( errno == ERANGE && ( baud == LONG_MAX || baud == LONG_MIN ) ) || ( errno != 0 && baud == 0 ) || ( baud < 0 ) ) 
   {
