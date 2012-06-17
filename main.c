@@ -70,7 +70,9 @@ int main( int argc, const char **argv )
 {
   u8 minor, major;
   u16 version;
-  long baud  = 115200;
+  int wantwrite = 0;
+  int wantread = 0;
+  int argind = 0;
  
   printf("\n==========================");
   printf("\n  CBBL host side loader   ");
@@ -80,44 +82,67 @@ int main( int argc, const char **argv )
   printf("\n==========================");
   printf("\n");
 
-  printf( "\nRequires input: firmware.bin, manual specification of FLASH base address\n for the program to be loaded");
-  printf( "\nProduces output: flashmemory.bin" );
-  printf( "\n");
+  /*
+  printf("Number of arguments argc = %d \n",argc);
+  printf("First argument: %s\n",argv[0]);
+  */
 
-  printf("argc = %d \n",argc);
-  printf("%s\n",argv[0]);
-
-  // Argument validation
-  if( argc != 5 && argc != 6 )
-  {
-    fprintf( stderr, "usage\nstm32ld [-usart,-can] [device path e.g. /dev/ttyUSB0]"
-    		" [firmware file] [download file] [-defaultbaseaddr,[-custombaseaddr, value]]\n" );
-    exit( 1 );
-  }
-
-
-
-  errno = 0;
-  //baud = strtol( argv[ 2 ], NULL, 10 );
-
-  // Communication peripheral selection
-  devselection = strtol( argv[0], NULL, 10);
-  printf("host: devselection: %d", devselection);
-
-
-  // FLASH base address
-  if (argc == 6 && strcmp(argv[4],"-custombaseaddr") == 0) {
-	  custombaseaddress = strtol( argv[5], NULL, 10);
-	  printf("host: custom base address selected: %x", custombaseaddress);
-  }
-  else if (argc == 6 && strcmp(argv[5],"-defaultbaseaddr") == 0) {
-	  custombaseaddress = STM32_FLASH_START_ADDRESS;
-	  printf("host: default base address selected: %x", custombaseaddress);
-  }
-  else {
-	  fprintf( stderr, "Cannot interpret address parameters\n" );
+  /******************************************** Argument handling *************************************/
+  // Case of no arguments
+  if (argc==1) {
+	  fprintf( stderr, "Use -help for details.\n\n");
 	  exit(1);
   }
+
+  // Help argument handler
+  if (strcmp(argv[1],"-help")==0)
+  {
+	fprintf( stderr, "Program usage:\nstm32ld {-usart,-can} {device path e.g. /dev/ttyUSB0}"
+			" [-write, firmware file] [-read, download file]] {-defaultbaseaddr,(-custombaseaddr, value)}\n"
+			"arguments marked with {} are mandatory unless going for -help\n"
+			"arguments marked with [] are optional\n"
+			"order of the first two arguments should be respected\n"
+			"examples:\n"
+			"stm32ld -usart /dev/ttyUSB0 -write firmware.bin -defaultbaseaddr\n"
+			"stm32ld -can /dev/pcanusb0 -custombaseaddr 0x08006000 -read flashmemory.bin -write firmware.bin\n"
+			"option behavior:\n"
+			"-write\twrite specified file into flash memory from given address\n"
+			"-read\tread flash memory into specified file from given address\n"
+			"neither -write nor -read\tjump to specified memory address and execute\n"
+			"\n\n" );
+	exit( 1 );
+	}
+
+  // Communication peripheral selection
+  if (strcmp(argv[1],"-usart")==0)  devselection = 1;
+  else if (strcmp(argv[1],"-can")==0) devselection = 2;
+  else {
+	  fprintf( stderr, "host: cannot interpret device selection parameter\n\n" );
+	  exit(1);
+  }
+
+  // FLASH base address selection
+  int found = 0;
+  while (argind<argc) {
+	  if (strcmp(argv[argind],"-custombaseaddr")==0 || strcmp(argv[argind],"-defaultbaseaddr")==0) {
+		  found = 1;
+		  if (strcmp(argv[argind],"-custombaseaddr") == 0) {
+		  	  custombaseaddress = strtoul( argv[argind+1], NULL, 0);
+		  	  printf("host: custom base address selected: %x\n", custombaseaddress);
+		    }
+		    else if (strcmp(argv[argind],"-defaultbaseaddr") == 0) {
+		  	  custombaseaddress = STM32_FLASH_START_ADDRESS;
+		  	  printf("host: default base address selected: %x\n", custombaseaddress);
+		    }
+	  }
+	  argind++;
+  }
+  if (found==0) {
+	  fprintf( stderr, "host: cannot interpret address parameters\n\n" );
+	  exit(1);
+  }
+
+
   /*
   if( ( errno == ERANGE && ( baud == LONG_MAX || baud == LONG_MIN ) ) || ( errno != 0 && baud == 0 ) || ( baud < 0 ) ) 
   {
@@ -126,66 +151,83 @@ int main( int argc, const char **argv )
   }
   */
 
-  //open firmware to be loaded
-  if( ( fp = fopen(argv[2], "rb" ) ) == NULL )
-  {
-	fprintf( stderr, "Unable to open ");
-	fprintf( stderr, argv[2]);
-	fprintf( stderr, " file\n");
-    exit( 1 );
+  // Want to write?
+  argind=0;
+  while (argind<argc) {
+	  if (strcmp(argv[argind],"-write")==0) {
+		  wantwrite=1;
+		  break;
+	  }
+  	  argind++;
   }
-  else
-  {
-    fseek( fp, 0, SEEK_END );
-    fpsize = ftell( fp );
-    fseek( fp, 0, SEEK_SET );
+  // If yes, open firmware file to be written
+  if (wantwrite) {
+	  printf("host: write selected\n");
+	  if( ( fp = fopen(argv[argind+1], "rb" ) ) == NULL )
+	  {
+		fprintf( stderr, "Unable to open ");
+		fprintf( stderr, argv[argind+1]);
+		fprintf( stderr, " file\n");
+		exit( 1 );
+	  }
+	  else
+	  {
+		printf("host: firmware file %s opened successfully\n", argv[argind+1]);
+		fseek( fp, 0, SEEK_END );
+		fpsize = ftell( fp );
+		fseek( fp, 0, SEEK_SET );
+	  }
   }
   
-  // open file for read memory
+  // Want to read?
+  argind=0;
+  while (argind<argc) {
+  	if (strcmp(argv[argind],"-read")==0) {
+  		wantread=1;
+  	 	break;
+  	}
+    argind++;
+  }
+  // If yes, open destination file for data from memory
   // file will be created and opened in write mode if non existing (wb option)
-  if( ( fflash = fopen(argv[3], "wb" ) ) == NULL )
-  {
-    fprintf( stderr, "Unable to open ");
-    fprintf( stderr, argv[3]);
-    fprintf( stderr, " file\n");
-    exit( 1 );
+  if (wantread) {
+	  printf("host: read selected\n");
+	  if( ( fflash = fopen(argv[argind+1], "wb" ) ) == NULL )
+	  {
+		fprintf( stderr, "Unable to open ");
+		fprintf( stderr, argv[argind+1]);
+		fprintf( stderr, " file\n");
+		exit( 1 );
+	  }
+	  else
+	  {
+		printf("host: flash memory download file %s opened successfully\n",argv[argind+1]);
+		fseek( fflash, 0, SEEK_END );
+		fflashsize = ftell( fflash );
+		fseek( fflash, 0, SEEK_SET );
+	  }
   }
-  else
-  {
-    fseek( fflash, 0, SEEK_END );
-    fflashsize = ftell( fp );
-    fseek( fflash, 0, SEEK_SET );
-  }
 
-
-  // Ask communication peripheral to use
-  /*
-  printf("\nhost: Which device do you wanna use (1 USART, 2 CAN) ?");
-  printf("\n");
-  scanf("%d", &devselection);
-  printf("host: devselection: %d", devselection);
-  */
-
+  /******************************************** Loader workflow *************************************/
   // Connect to bootloader
-  // Use /dev/ttyUSB0
-  printf( "\nhost: Initializing communication with the device");
-  if( stm32_init(argv[1], baud ) != STM32_OK )
+  printf( "host: Initializing communication with the device\n");
+  if( stm32_init(argv[2], (u32)SER_BAUD ) != STM32_OK )
   {
-    fprintf( stderr, "\nhost: Unable to connect to bootloader" );
+    fprintf( stderr, "host: Unable to connect to bootloader\n\n" );
     exit( 1 );
   }
-    else printf("\nhost: init succeded");
+    else printf("host: init succeded\n");
 
-  
+
   // Get version
   if( stm32_get_version( &major, &minor ) != STM32_OK )
   {
-    fprintf( stderr, "host: Unable to get bootloader version" );
+    fprintf( stderr, "host: Unable to get bootloader version\n\n" );
     exit( 1 );
   }
   else
   {
-    printf( "\nhost: Found bootloader version: %d.%d", major, minor );
+    printf( "host: Found bootloader version: %d.%d\n", major, minor );
     /*
     if( BL_MKVER( major, minor ) < BL_MINVERSION )
     {
@@ -198,12 +240,12 @@ int main( int argc, const char **argv )
   // Get chip ID
   if( stm32_get_chip_id( &version ) != STM32_OK )
   {
-    fprintf( stderr, "\nhost:Unable to get chip ID" );
+    fprintf( stderr, "host:Unable to get chip ID\n\n" );
     exit( 1 );
   }
   else
   {
-    printf( "\nhost: Chip ID: %04X", version );
+    printf( "host: Chip ID: %04X\n", version );
     /*
     if( version != CHIP_ID )
     {
@@ -214,61 +256,68 @@ int main( int argc, const char **argv )
   }
 
   // Write unprotect
-  if( stm32_write_unprotect() != STM32_OK )
-  {
-    fprintf( stderr, "\n:host: Unable to execute write unprotect\n" );
-    exit( 1 );
+  if (wantread || wantwrite) {
+	  if( stm32_write_unprotect() != STM32_OK )
+	  {
+		fprintf( stderr, ":host: Unable to execute write unprotect\n\n" );
+		exit( 1 );
+	  }
+	  else
+		printf( "host: Cleared write protection.\n\n" );
   }
-  else
-    printf( "\nhost: Cleared write protection." );
 
   // Erase flash
-  if( stm32_erase_flash() != STM32_OK )
-  {
-    fprintf( stderr, "\nUnable to erase chip" );
-    exit( 1 );
+  if (wantwrite) {
+	  if( stm32_erase_flash() != STM32_OK )
+	  {
+		fprintf( stderr, "Unable to erase chip\n\n" );
+		exit( 1 );
+	  }
+	  else
+		printf( "host: Erased FLASH memory.\n" );
   }
-  else
-    printf( "\nhost: Erased FLASH memory.\n" );
 
   // Program flash
-  setbuf( stdout, NULL );
-  printf( "host: Programming flash ... ");
-  if( stm32_write_flash( writeh_read_data, writeh_progress ) != STM32_OK )
-  {
-    fprintf( stderr, "Unable to program FLASH memory.\n" );
-    exit( 1 );
+  if (wantwrite) {
+	  setbuf( stdout, NULL );
+	  printf( "host: Programming flash ... \n ");
+	  if( stm32_write_flash( writeh_read_data, writeh_progress ) != STM32_OK )
+	  {
+		fprintf( stderr, "Unable to program FLASH memory.\n\n" );
+		exit( 1 );
+	  }
+	  else {
+		printf( "host: write memory successfully completed.\n" );
+	  	fclose( fp );
+	  }
   }
-  else
-    printf( "\nhost: write memory successfully completed." );
-
 
   // Read flash
-  printf( "host: Reading flash ... ");
-  if( stm32_read_flash(fflash) != STM32_OK )
-  {
-    fprintf( stderr, "Unable to read FLASH memory.\n" );
-    fclose( fflash );
-    exit( 1 );
+  if (wantread) {
+	  printf( "host: Reading flash ... \n");
+	  if( stm32_read_flash(fflash) != STM32_OK )
+	  {
+		fprintf( stderr, "Unable to read FLASH memory.\n\n" );
+		fclose( fflash );
+		exit( 1 );
+	  }
+	  else {
+		fseek( fflash, 0, SEEK_END );
+		fflashsize = ftell( fflash );
+		fseek( fflash, 0, SEEK_SET );
+		printf( "\nhost: FLASH memory successfully read (%d bytes).\n",fflashsize);
+		fclose( fflash );
+	  }
   }
-  else {
-    fseek( fflash, 0, SEEK_END );
-    fflashsize = ftell( fflash );
-    fseek( fflash, 0, SEEK_SET );
-    printf( "\nhost: FLASH memory successfully read (%d bytes). Binary output in flashmemory.bin",fflashsize);
-  }
-
-
-  // Close files
-  fclose( fflash );
-  fclose( fp );
 
   // Jump to app
-  printf( "\nhost: Jumping to app... ");
+  printf( "host: Jumping to app...\n");
   stm32_jump();
 
-  printf( "\n\nhost: Done!");
+  printf( "\nhost: Done!\n\n");
   return 0;
 
 }
+
+/*******************************************************************************************/
            

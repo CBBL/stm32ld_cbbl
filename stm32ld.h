@@ -14,8 +14,6 @@
 // Global variable to be assigned a value either CAN or USART
 int devselection;
 
-
-
 // Error codes
 enum
 {
@@ -32,6 +30,8 @@ enum
 #define STM32_COMM_NACK     0x1F
 #define STM32_COMM_TIMEOUT  2000000
 #define STM32_WRITE_BUFSIZE 256
+
+#define SER_BAUD (115200)
 
 // Device FLASH memory data
 #define STM32_FLASH_START_ADDRESS 0x08006000

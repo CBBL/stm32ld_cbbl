@@ -114,7 +114,7 @@ static int stm32h_connect_to_bl()
 
 	  // Initiate communication
 	  ser_write_byte( stm32_ser_id, STM32_CMD_INIT );
-	  printf("\nhost: init byte sent");
+	  printf("\nhost: init byte sent\n");
 	  res = stm32h_read_byte();
 	  //while( (log = stm32h_read_byte()) != -1 )
 		// printf("%c", log);
@@ -233,7 +233,7 @@ int stm32_init( const char *portname, u32 baud )
 	  printf( "\nhost: opening Peak CAN driver now");
 
 	  // Open port and assign it to HANDLE h
-	  h = LINUX_CAN_Open("/dev/pcanusb0", O_RDWR);
+	  h = LINUX_CAN_Open( portname , O_RDWR);
 	  if (h==NULL) fprintf(stderr,"\nhost: Peak CAN driver open fail");
 
 	  // Setup port
@@ -352,8 +352,7 @@ int stm32_write_unprotect()
 		printf("\n\thost: ack received (Flash unprotected successfully)");
 		printf("\n\thost: reinitializing due to device reset");
 		// At this point the system got a reset, so we need to re-enter BL mode
-		//int i;
-		//while(i<99) i++;
+		//delay(99);
 		return stm32h_connect_to_bl();
 
 	}
@@ -369,8 +368,7 @@ int stm32_write_unprotect()
 		printf("\n\thost: ack received (Flash unprotected successfully)");
 		printf("\n\thost: reinitializing due to device reset");
 		// At this point the system got a reset, so we need to re-enter BL mode
-		//int i;
-		//while(i<99) i++;
+		//delay(99);
 		return stm32h_connect_to_bl();
 
 	}
@@ -446,11 +444,13 @@ int stm32_write_flash( p_read_data read_data_func, p_progress progress_func )
   printf("\nhost: starting to write memory");
 
   address = custombaseaddress;
+  printf("host: programming Flash starting from: %x", address, address);
+
   /*
   printf("\n");
   printf("host: Type flash base address (default 0x08006000):\n");
   scanf("%x", &address);
-  printf("host: programming Flash starting from: %x", address, address);
+
   */
 
   //STM32_CHECK_INIT;
@@ -497,23 +497,26 @@ int stm32_write_flash( p_read_data read_data_func, p_progress progress_func )
     // Advance to next data
     address += datalen;
   }
-  printf("\n\thost: returning, write successful");
+  printf("\n\thost: returning, write successful\n");
   return STM32_OK;
 }
 
 // Jump to application
 int stm32_jump() {
 	u32 address;
+	/*
 	printf("\n");
 	printf("host: Type address to jump to (default 0x08006000):\n");
 	scanf("%x", &address);
+	*/
+	address = custombaseaddress;
 	printf("host: jumping to: %x", address, address);
 	stm32h_send_command( STM32_CMD_GO );
 	STM32_EXPECT( STM32_COMM_ACK );
 	printf("\n\thost: ack received (jump request)");
 	stm32h_send_address( address );
 	STM32_EXPECT( STM32_COMM_ACK );
-	printf("\n\thost: ack received (address ok)");
+	printf("\n\thost: ack received (address ok)\n");
 	return STM32_OK;
 }
 
@@ -526,10 +529,14 @@ int stm32_read_flash(FILE* fflash) {
 	int numwritten, i;
 
 	//ask base address to user
+	/*
 	printf("\nhost: starting to read memory");
 	printf("\n");
 	printf("host: Type flash base address (default 0x08006000):\n");
 	scanf("%x", &address);
+	*/
+
+	address = custombaseaddress;
 	printf("host: reading Flash starting from %x until %x", address, STM32_FLASH_END_ADDRESS);
 
 	//one instance of the command allows to fetch 256 bytes maximum due to protocol specification
