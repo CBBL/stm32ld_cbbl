@@ -483,10 +483,14 @@ int stm32_write_flash( p_read_data read_data_func, p_progress progress_func )
     //delay(9);
     printf("\n\thost: sending data...");
     stm32h_send_packet_with_checksum( data, datalen + 1 );
+    printf("\n\thost: data sent... now waiting for ack");
     //delay(9);
     cbbltest = stm32h_read_byte();
     if (cbbltest == -1) printf("\n\tread byte failed, %x, %d", cbbltest, cbbltest);
-    if(cbbltest != STM32_COMM_ACK) return STM32_COMM_ERROR;
+    if(cbbltest != STM32_COMM_ACK) {
+    	printf("\n\thost: ack not received, instead I received %x",cbbltest);
+    	return STM32_COMM_ERROR;
+    }
     printf("\n\thost: ack received (data packet ok)");
 
     // Call progress function (if provided)

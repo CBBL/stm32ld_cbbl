@@ -97,18 +97,22 @@ int main( int argc, const char **argv )
   // Help argument handler
   if (strcmp(argv[1],"-help")==0)
   {
-	fprintf( stderr, "Program usage:\nstm32ld {-usart,-can} {device path e.g. /dev/ttyUSB0}"
-			" [-write, firmware file] [-read, download file]] {-defaultbaseaddr,(-custombaseaddr, value)}\n"
+	fprintf( stderr, "Program usage:./stm32ld_cbbl {-usart,-can} {device path e.g. /dev/ttyUSB0}"
+			" [-write, firmware file] [-read, download file] {-defaultbaseaddr,(-custombaseaddr, value)}\n"
 			"arguments marked with {} are mandatory unless going for -help\n"
 			"arguments marked with [] are optional\n"
 			"order of the first two arguments should be respected\n"
 			"examples:\n"
-			"stm32ld -usart /dev/ttyUSB0 -write firmware.bin -defaultbaseaddr\n"
-			"stm32ld -can /dev/pcanusb0 -custombaseaddr 0x08006000 -read flashmemory.bin -write firmware.bin\n"
-			"option behavior:\n"
-			"-write\twrite specified file into flash memory from given address\n"
-			"-read\tread flash memory into specified file from given address\n"
-			"neither -write nor -read\tjump to specified memory address and execute\n"
+			"stm32ld_cbbl -usart /dev/ttyUSB0 -write firmwaretowrite.bin -defaultbaseaddr\n"
+			"stm32ld_cbbl -can /dev/pcanusb0 -custombaseaddr 0x08007000 -read readflashmemory.bin -write firmwaretowrite.bin\n"
+			"switches description:\n"
+			"-write	write specified file into Flash memory from given address\n"
+			"-read	read Flash memory into specified file from given address\n"
+		    " neither -write nor -read	jump to specified memory address and execute\n"
+			"-defaultbaseaddr use hard-coded base address 0x0800 6000 as the first\n"
+		    "\tFlash address where the write/read/jump operations will begin\n"
+			"-custombaseaddr use the specified value as the base address\n"
+		    "\tvalue must be in the format 0xY\n"
 			"\n\n" );
 	exit( 1 );
 	}
