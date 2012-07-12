@@ -22,19 +22,19 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: stm32ld_cbbltest
+all: stm32ld_cbbl
 
 # Tool invocations
-stm32ld_cbbltest: $(OBJS) $(USER_OBJS)
+stm32ld_cbbl: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C Linker'
-	gcc  -o "stm32ld_cbbltest" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc  -o "stm32ld_cbbl" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES) stm32ld_cbbltest
+	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES) stm32ld_cbbl
 	-@echo ' '
 
 .PHONY: all clean dependents
