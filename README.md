@@ -1,16 +1,17 @@
 STM32 Firmware Loader
+To be used with CBBL at https://github.com/CBBL/CBBL
 =====================
 
-These C sources can be used to burn .bin (no hex support) firmware images to STM32 microcontrollers using the built-in serial bootloader.
+These C sources can be used to burn .bin (no hex support) firmware images to STM32 microcontrollers using the device side bootloader CBBL at https://github.com/CBBL/CBBL
+Features both USART and CAN communication through a converter manufactured by PEAK Systems and the related library.
+Built for Linux Ubuntu 11.10
 
-> Usage: stm32ld &lt;port&gt; &lt;baud&gt; &lt;binary image name&gt;
-  
+Credits to the original source author: Bogdan Marinescu <bogdan.marinescu@gmail.com>
+https://github.com/jsnyder/stm32ld
 
-Building
---------
+Edited and improved at Politecnico di Milano by:
+Marco Zavatta
+<zavaboss@gmail.com>
+Yin Zhining
+<newcrazyyin1988@hotmail.com>
 
-Linux/Mac OS X:
-> gcc -o stm32ld main.c stm32ld.c serial_posix.c
-
-
-Original source author: Bogdan Marinescu <bogdan.marinescu@gmail.com>
