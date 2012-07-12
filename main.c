@@ -4,17 +4,6 @@
  * Uses PEAK System PCAN-USB IPEH-002021 and its library
  */
 
-/*
- * Usage:
- * stm32ld [-usart,-can] [device path e.g. /dev/ttyUSB0] [-defaultbaseaddr,[-custombaseaddr, value]] [firmware file] [download file]
- * argument order must be respected
- * firmware file must be present in the file system
- * download file will be created in non-existent or overwritten
- *
- * Example:
- * stm32ld -usart /dev/ttyUSB0 -custombaseaddr 0x08006000 firmware.bin flashmemory.bin
- * stm32ld -can /dev/pcanusb0 -defaultbaseaddr firmware.bin flashmemory.bin
- */
 
 #include "stm32ld.h"
 #include <stdio.h>
@@ -70,8 +59,9 @@ int main( int argc, const char **argv )
 {
   u8 minor, major;
   u16 version;
-  int wantwrite = 0;
-  int wantread = 0;
+  int wantwrite = 0;  //not writing unless specified
+  int wantread = 0;   //not reading unless specified
+  int wanterase = 1;  //erasing unless specified not to do so
   int argind = 0;
  
   printf("\n==========================");
@@ -98,7 +88,7 @@ int main( int argc, const char **argv )
   if (strcmp(argv[1],"-help")==0)
   {
 	fprintf( stderr, "Program usage:./stm32ld_cbbl {-usart,-can} {device path e.g. /dev/ttyUSB0}"
-			" [-write, firmware file] [-read, download file] {-defaultbaseaddr,(-custombaseaddr, value)}\n"
+			" [-write, firmware file] [-read, download file] [-noerase] {-defaultbaseaddr,(-custombaseaddr, value)}\n"
 			"arguments marked with {} are mandatory unless going for -help\n"
 			"arguments marked with [] are optional\n"
 			"order of the first two arguments should be respected\n"
@@ -113,6 +103,7 @@ int main( int argc, const char **argv )
 		    "\tFlash address where the write/read/jump operations will begin\n"
 			"-custombaseaddr use the specified value as the base address\n"
 		    "\tvalue must be in the format 0xY\n"
+		    "-noerase do not erase the Flash memory"
 			"\n\n" );
 	exit( 1 );
 	}
@@ -212,6 +203,20 @@ int main( int argc, const char **argv )
 	  }
   }
 
+  // Want to erase?
+  argind=0;
+  while (argind<argc) {
+  	 if (strcmp(argv[argind],"-noerase")==0) {
+  	    wanterase=0;
+  		break;
+  	  }
+      argind++;
+  }
+  if (wanterase)
+	  printf("host: erase selected\n");
+  else printf("host: erase deactivated\n");
+
+
   /******************************************** Loader workflow *************************************/
   // Connect to bootloader
   printf( "host: Initializing communication with the device\n");
@@ -271,7 +276,7 @@ int main( int argc, const char **argv )
   }
 
   // Erase flash
-  if (wantwrite) {
+  if (wantwrite && wanterase) {
 	  if( stm32_erase_flash() != STM32_OK )
 	  {
 		fprintf( stderr, "Unable to erase chip\n\n" );
